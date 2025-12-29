@@ -1,0 +1,275 @@
+# docker-compose.yml
+# STPA Tutorial: Resilient Configuration with Safety Controls
+#
+# This configuration implements all mitigations identified through STPA analysis
+# addressing Loss Scenarios LS-1, LS-2, and LS-3
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # API Gateway - With rate limiting, timeouts, and health checks
+  # Enforces: SC4, SC6
+  # =============================================================================
+  api-gateway:
+    build:
+      context: ./src/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - RAG_SERVICE_URL=http://rag-service:8001
+      - MCP_SERVICE_URL=http://mcp-service:8002
+      # SAFE: Request timeout prevents indefinite waits
+      - REQUEST_TIMEOUT=10
+      # SAFE: Rate limiting prevents DoS
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS=100
+      - RATE_LIMIT_WINDOW=60
+      # SAFE: Per-user rate limiting
+      - RATE_LIMIT_PER_USER=true
+      # Logging for observability
+      - LOG_LEVEL=INFO
+    depends_on:
+      rag-service:
+        condition: service_healthy
+      mcp-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # =============================================================================
+  # RAG Service - With embedding validation, query timeout, isolated pool
+  # Enforces: SC1, SC3
+  # =============================================================================
+  rag-service:
+    build:
+      context: ./src/rag_service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      # SAFE: Embedding validation prevents malformed queries (SC-UCA6.2)
+      - VALIDATE_EMBEDDINGS=true
+      - EMBEDDING_DIM=384
+      - MIN_EMBEDDING_NORM=0.001
+      # SAFE: Query timeout prevents blocking (SC-UCA6.4)
+      - QUERY_TIMEOUT=3
+      # SAFE: Isolated connection pool
+      - MAX_CONNECTIONS=20
+      - CONNECTION_POOL_SHARED=false
+      # SAFE: Relevance threshold for context quality (SC1)
+      - MIN_RELEVANCE_SCORE=0.5
+      # SAFE: Health check includes ChromaDB connectivity
+      - HEALTH_CHECK_CHROMADB=true
+    depends_on:
+      chromadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health', timeout=2).raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # =============================================================================
+  # MCP Service - With circuit breaker, timeout, input sanitization
+  # Enforces: SC2, SC4, SC5
+  # =============================================================================
+  mcp-service:
+    build:
+      context: ./src/mcp_service
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - EXTERNAL_API_URL=http://mock-external-api:8004
+      # SAFE: Timeout on external calls (SC-UCA9.4)
+      - EXTERNAL_CALL_TIMEOUT=3
+      # SAFE: Circuit breaker prevents cascade (SC4)
+      - CIRCUIT_BREAKER_ENABLED=true
+      - CIRCUIT_BREAKER_THRESHOLD=3
+      - CIRCUIT_BREAKER_TIMEOUT=30
+      # SAFE: Input sanitization (SC-UCA9.2)
+      - SANITIZE_INPUT=true
+      # SAFE: Re-validate authorization (SC-UCA9.3)
+      - REVALIDATE_AUTH=true
+      # SAFE: Tool access scoping (SC5)
+      - TOOL_ACCESS_SCOPING=true
+      # Fallback configuration
+      - FALLBACK_ENABLED=true
+      - CACHE_FALLBACK_TTL=300
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # =============================================================================
+  # ChromaDB - Vector database with health monitoring
+  # =============================================================================
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8003:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+      - CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER=chromadb.auth.token.TokenAuthCredentialsProvider
+      - CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token.TokenAuthServerProvider
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # =============================================================================
+  # Redis - For circuit breaker state, caching, and distributed locking
+  # Supports: Index rebuild coordination (LS-1 mitigation)
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - ai-network
+
+  # =============================================================================
+  # Mock External API - Weather service (behaves normally in resilient config)
+  # =============================================================================
+  mock-external-api:
+    build:
+      context: ./src/api
+      dockerfile: Dockerfile.mock
+    ports:
+      - "8004:8004"
+    environment:
+      # Normal operation (occasional delays to test circuit breaker)
+      - RESPONSE_DELAY_SECONDS=0
+      - RANDOM_DELAY_MAX=2
+      - FAILURE_RATE=0.1  # 10% failure rate to test resilience
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ai-network
+
+  # =============================================================================
+  # Prometheus - Metrics collection for observability
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - ai-network
+
+  # =============================================================================
+  # Grafana - Visualization for monitoring
+  # =============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - ai-network
+
+networks:
+  ai-network:
+    driver: bridge
+
+volumes:
+  chroma-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+# =============================================================================
+# STPA Safety Controls Summary:
+# =============================================================================
+#
+# SC1 (Context validation):
+#   - MIN_RELEVANCE_SCORE filters low-quality context
+#   - VALIDATE_EMBEDDINGS ensures vector integrity
+#
+# SC2 (Parameter sanitization):
+#   - SANITIZE_INPUT validates MCP tool parameters
+#   - JSON schema validation on all inputs
+#
+# SC3 (Vector store health):
+#   - HEALTH_CHECK_CHROMADB verifies database state
+#   - Redis-based locking for index rebuild coordination
+#
+# SC4 (Timeouts and circuit breakers):
+#   - REQUEST_TIMEOUT at API gateway (10s)
+#   - QUERY_TIMEOUT at RAG service (3s)
+#   - EXTERNAL_CALL_TIMEOUT at MCP service (3s)
+#   - Circuit breaker with fallback
+#
+# SC5 (Tool access scoping):
+#   - TOOL_ACCESS_SCOPING limits tools by user role
+#   - REVALIDATE_AUTH re-checks authorization
+#
+# SC6 (Rate limiting):
+#   - RATE_LIMIT_ENABLED prevents DoS
+#   - RATE_LIMIT_PER_USER prevents single-user abuse
+# =============================================================================

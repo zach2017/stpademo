@@ -1,0 +1,47 @@
+# Prometheus Configuration for STPA AI System Monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  # API Gateway metrics
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # RAG Service metrics
+  - job_name: 'rag-service'
+    static_configs:
+      - targets: ['rag-service:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # MCP Service metrics
+  - job_name: 'mcp-service'
+    static_configs:
+      - targets: ['mcp-service:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # ChromaDB (if metrics available)
+  - job_name: 'chromadb'
+    static_configs:
+      - targets: ['chromadb:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Redis metrics (requires redis_exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s

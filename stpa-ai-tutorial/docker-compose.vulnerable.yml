@@ -1,0 +1,157 @@
+# docker-compose.vulnerable.yml
+# STPA Tutorial: Vulnerable Configuration (demonstrates cascading timeout failure)
+# 
+# This configuration intentionally lacks safety controls to demonstrate
+# Loss Scenario LS-3: Cascading Timeout Causes System Hang
+#
+# UCAs demonstrated:
+#   - UCA6.4: Query timeout too long blocks service
+#   - UCA9.4: Tool execution not terminated on timeout
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # API Gateway - No rate limiting, no request timeout
+  # Violates: SC6 (Request rate must be limited)
+  # =============================================================================
+  api-gateway:
+    build:
+      context: ./src/api
+      dockerfile: Dockerfile.vulnerable
+    ports:
+      - "8000:8000"
+    environment:
+      - RAG_SERVICE_URL=http://rag-service:8001
+      - MCP_SERVICE_URL=http://mcp-service:8002
+      # VULNERABLE: No timeout configuration
+      # VULNERABLE: No rate limiting
+      - REQUEST_TIMEOUT=0  # 0 = no timeout (dangerous!)
+      - RATE_LIMIT_ENABLED=false
+    depends_on:
+      - rag-service
+      - mcp-service
+    networks:
+      - ai-network
+    # VULNERABLE: No health check configured
+
+  # =============================================================================
+  # RAG Service - No embedding validation, no query timeout
+  # Violates: SC1 (Context validation), SC3 (Vector store health)
+  # =============================================================================
+  rag-service:
+    build:
+      context: ./src/rag_service
+      dockerfile: Dockerfile.vulnerable
+    ports:
+      - "8001:8001"
+    environment:
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8003
+      # VULNERABLE: No embedding validation
+      - VALIDATE_EMBEDDINGS=false
+      # VULNERABLE: No query timeout
+      - QUERY_TIMEOUT=0
+      # VULNERABLE: Shared connection pool (will be exhausted)
+      - MAX_CONNECTIONS=5
+      - CONNECTION_POOL_SHARED=true
+    depends_on:
+      - chromadb
+    networks:
+      - ai-network
+
+  # =============================================================================
+  # MCP Service - No circuit breaker, no timeout, no input sanitization
+  # Violates: SC2 (Parameter sanitization), SC4 (Timeouts and circuit breakers)
+  # =============================================================================
+  mcp-service:
+    build:
+      context: ./src/mcp_service
+      dockerfile: Dockerfile.vulnerable
+    ports:
+      - "8002:8002"
+    environment:
+      - EXTERNAL_API_URL=http://mock-external-api:8004
+      # VULNERABLE: No timeout on external calls
+      - EXTERNAL_CALL_TIMEOUT=0
+      # VULNERABLE: No circuit breaker
+      - CIRCUIT_BREAKER_ENABLED=false
+      # VULNERABLE: No input sanitization
+      - SANITIZE_INPUT=false
+      # VULNERABLE: No authorization re-check
+      - REVALIDATE_AUTH=false
+    depends_on:
+      - mock-external-api
+    networks:
+      - ai-network
+
+  # =============================================================================
+  # ChromaDB - Vector database
+  # =============================================================================
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8003:8000"
+    volumes:
+      - chroma-data-vulnerable:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+    networks:
+      - ai-network
+
+  # =============================================================================
+  # Mock External API - Simulates slow/failing weather service
+  # This service will intentionally be slow to trigger the cascading failure
+  # =============================================================================
+  mock-external-api:
+    build:
+      context: ./src/api
+      dockerfile: Dockerfile.mock
+    ports:
+      - "8004:8004"
+    environment:
+      # Simulate 30-second delay (longer than any reasonable timeout should be)
+      - RESPONSE_DELAY_SECONDS=30
+      - FAILURE_RATE=0.3  # 30% chance of complete failure
+    networks:
+      - ai-network
+
+networks:
+  ai-network:
+    driver: bridge
+
+volumes:
+  chroma-data-vulnerable:
+
+# =============================================================================
+# STPA Analysis Notes for this Configuration:
+# =============================================================================
+#
+# HAZARDS PRESENT:
+#   H4: System fails to handle external API timeouts gracefully
+#   H6: System processes queries without rate limiting
+#
+# UNSAFE CONTROL ACTIONS ENABLED:
+#   UCA3.1: No rate limiting allows DoS
+#   UCA6.4: Query timeout too long blocks service
+#   UCA9.2: Tool executed with unsanitized input
+#   UCA9.4: Tool execution not terminated on timeout
+#
+# EXPECTED FAILURE MODE:
+#   1. Send request requiring external API call
+#   2. Mock API delays response by 30 seconds
+#   3. MCP service thread blocks indefinitely
+#   4. Connection pool depletes
+#   5. Subsequent requests fail
+#   6. System becomes unresponsive
+#
+# TO REPRODUCE FAILURE:
+#   docker-compose -f docker-compose.vulnerable.yml up
+#   # In another terminal, run multiple requests:
+#   for i in {1..10}; do
+#     curl -X POST http://localhost:8000/query \
+#       -H "Content-Type: application/json" \
+#       -d '{"query": "weather in NYC"}' &
+#   done
+#   # Watch services become unresponsive
+# =============================================================================

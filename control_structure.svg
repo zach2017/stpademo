@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#374151"/>
+    </marker>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#DC2626"/>
+    </marker>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="700" fill="#f8fafc"/>
+  
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1e293b">
+    STPA Control Structure: AI System with RAG + MCP
+  </text>
+  
+  <!-- Legend -->
+  <g transform="translate(700, 50)">
+    <rect x="0" y="0" width="180" height="90" rx="5" fill="white" stroke="#e2e8f0"/>
+    <text x="90" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#374151">Legend</text>
+    <line x1="10" y1="35" x2="50" y2="35" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <text x="60" y="39" font-size="10" fill="#374151">Control Action</text>
+    <line x1="10" y1="55" x2="50" y2="55" stroke="#059669" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead-green)"/>
+    <text x="60" y="59" font-size="10" fill="#374151">Feedback</text>
+    <line x1="10" y1="75" x2="50" y2="75" stroke="#DC2626" stroke-width="2" marker-end="url(#arrowhead-red)"/>
+    <text x="60" y="79" font-size="10" fill="#374151">Unsafe Path</text>
+  </g>
+  
+  <!-- Level 0: Human Operators -->
+  <g transform="translate(50, 60)">
+    <rect x="0" y="0" width="600" height="70" rx="8" fill="#dbeafe" stroke="#3b82f6" stroke-width="2"/>
+    <text x="300" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">LEVEL 0: HUMAN OPERATORS</text>
+    <rect x="150" y="30" width="300" height="30" rx="4" fill="white" stroke="#3b82f6"/>
+    <text x="300" y="50" text-anchor="middle" font-size="11" fill="#374151">System Administrator</text>
+  </g>
+  
+  <!-- Arrow L0 to L1 -->
+  <line x1="350" y1="130" x2="350" y2="160" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="360" y="150" font-size="9" fill="#374151">Configure, Monitor</text>
+  
+  <!-- Level 1: Orchestration -->
+  <g transform="translate(50, 170)">
+    <rect x="0" y="0" width="600" height="100" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+    <text x="300" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#92400e">LEVEL 1: ORCHESTRATION LAYER</text>
+    
+    <!-- API Gateway -->
+    <rect x="100" y="35" width="400" height="55" rx="4" fill="white" stroke="#f59e0b"/>
+    <text x="300" y="55" text-anchor="middle" font-size="11" font-weight="bold" fill="#374151">API Gateway Controller</text>
+    
+    <!-- Safety controls -->
+    <rect x="110" y="65" width="80" height="20" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="150" y="79" text-anchor="middle" font-size="8" fill="#166534">Rate Limiter</text>
+    
+    <rect x="200" y="65" width="80" height="20" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="240" y="79" text-anchor="middle" font-size="8" fill="#166534">Timeout</text>
+    
+    <rect x="290" y="65" width="80" height="20" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="330" y="79" text-anchor="middle" font-size="8" fill="#166534">Auth Guard</text>
+    
+    <rect x="380" y="65" width="110" height="20" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="435" y="79" text-anchor="middle" font-size="8" fill="#166534">Request Validator</text>
+  </g>
+  
+  <!-- Arrows L1 to L2 -->
+  <line x1="250" y1="270" x2="200" y2="310" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="180" y="290" font-size="9" fill="#374151">CA1: Route</text>
+  
+  <line x1="450" y1="270" x2="500" y2="310" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="510" y="290" font-size="9" fill="#374151">CA2: Route</text>
+  
+  <!-- Level 2: Services -->
+  <g transform="translate(50, 320)">
+    <rect x="0" y="0" width="600" height="150" rx="8" fill="#e0e7ff" stroke="#6366f1" stroke-width="2"/>
+    <text x="300" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#4338ca">LEVEL 2: SERVICE LAYER</text>
+    
+    <!-- RAG Service -->
+    <rect x="20" y="35" width="250" height="105" rx="4" fill="white" stroke="#6366f1"/>
+    <text x="145" y="55" text-anchor="middle" font-size="11" font-weight="bold" fill="#374151">RAG Controller</text>
+    
+    <rect x="30" y="65" width="100" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="80" y="77" text-anchor="middle" font-size="8" fill="#166534">Embed Validator</text>
+    
+    <rect x="140" y="65" width="100" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="190" y="77" text-anchor="middle" font-size="8" fill="#166534">Relevance Filter</text>
+    
+    <rect x="30" y="88" width="100" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="80" y="100" text-anchor="middle" font-size="8" fill="#166534">Query Timeout</text>
+    
+    <rect x="140" y="88" width="100" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="190" y="100" text-anchor="middle" font-size="8" fill="#166534">Rebuild Lock</text>
+    
+    <text x="145" y="125" text-anchor="middle" font-size="9" fill="#6b7280">CA5-7: Embed, Query, Generate</text>
+    
+    <!-- MCP Service -->
+    <rect x="330" y="35" width="250" height="105" rx="4" fill="white" stroke="#6366f1"/>
+    <text x="455" y="55" text-anchor="middle" font-size="11" font-weight="bold" fill="#374151">MCP Controller</text>
+    
+    <rect x="340" y="65" width="110" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="395" y="77" text-anchor="middle" font-size="8" fill="#166534">Circuit Breaker</text>
+    
+    <rect x="460" y="65" width="110" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="515" y="77" text-anchor="middle" font-size="8" fill="#166534">Input Sanitizer</text>
+    
+    <rect x="340" y="88" width="110" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="395" y="100" text-anchor="middle" font-size="8" fill="#166534">Auth Validator</text>
+    
+    <rect x="460" y="88" width="110" height="18" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+    <text x="515" y="100" text-anchor="middle" font-size="8" fill="#166534">Fallback Handler</text>
+    
+    <text x="455" y="125" text-anchor="middle" font-size="9" fill="#6b7280">CA8-10: Select, Execute, Return</text>
+  </g>
+  
+  <!-- Arrows L2 to L3 -->
+  <line x1="145" y1="470" x2="145" y2="520" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="100" y="500" font-size="9" fill="#374151">CA6: Query</text>
+  
+  <line x1="505" y1="470" x2="505" y2="520" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="520" y="500" font-size="9" fill="#374151">CA9: Execute</text>
+  
+  <!-- Feedback arrows -->
+  <line x1="165" y1="520" x2="165" y2="470" stroke="#059669" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead-green)"/>
+  <line x1="525" y1="520" x2="525" y2="470" stroke="#059669" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead-green)"/>
+  
+  <!-- Level 3: Data/External -->
+  <g transform="translate(50, 530)">
+    <rect x="0" y="0" width="600" height="100" rx="8" fill="#fce7f3" stroke="#db2777" stroke-width="2"/>
+    <text x="300" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#9d174d">LEVEL 3: DATA/EXTERNAL LAYER</text>
+    
+    <!-- ChromaDB -->
+    <rect x="20" y="35" width="250" height="55" rx="4" fill="white" stroke="#db2777"/>
+    <text x="145" y="55" text-anchor="middle" font-size="11" font-weight="bold" fill="#374151">ChromaDB</text>
+    <text x="145" y="70" text-anchor="middle" font-size="9" fill="#6b7280">(Controlled Process)</text>
+    <text x="145" y="82" text-anchor="middle" font-size="8" fill="#9ca3af">State: Index, Health, Doc Count</text>
+    
+    <!-- External API -->
+    <rect x="330" y="35" width="250" height="55" rx="4" fill="white" stroke="#db2777"/>
+    <text x="455" y="55" text-anchor="middle" font-size="11" font-weight="bold" fill="#374151">External APIs</text>
+    <text x="455" y="70" text-anchor="middle" font-size="9" fill="#6b7280">(Controlled Process)</text>
+    <text x="455" y="82" text-anchor="middle" font-size="8" fill="#9ca3af">State: Availability, Latency</text>
+  </g>
+  
+  <!-- Unsafe control action example -->
+  <g transform="translate(700, 320)">
+    <rect x="0" y="0" width="180" height="120" rx="5" fill="#fef2f2" stroke="#DC2626"/>
+    <text x="90" y="20" text-anchor="middle" font-size="10" font-weight="bold" fill="#991b1b">UCA Example</text>
+    <text x="10" y="40" font-size="8" fill="#374151">UCA9.4: Tool execution</text>
+    <text x="10" y="52" font-size="8" fill="#374151">not terminated on timeout</text>
+    <line x1="10" y1="60" x2="170" y2="60" stroke="#e5e7eb"/>
+    <text x="10" y="75" font-size="8" fill="#374151">Hazard: H4</text>
+    <text x="10" y="87" font-size="8" fill="#374151">Loss: L3 (Availability)</text>
+    <text x="10" y="99" font-size="8" fill="#166534">Mitigation: Circuit</text>
+    <text x="10" y="111" font-size="8" fill="#166534">Breaker + Timeout</text>
+  </g>
+  
+  <!-- Safety constraint box -->
+  <g transform="translate(700, 460)">
+    <rect x="0" y="0" width="180" height="100" rx="5" fill="#f0fdf4" stroke="#16a34a"/>
+    <text x="90" y="20" text-anchor="middle" font-size="10" font-weight="bold" fill="#166534">Safety Constraints</text>
+    <text x="10" y="40" font-size="8" fill="#374151">SC4: External calls must</text>
+    <text x="10" y="52" font-size="8" fill="#374151">have timeouts + breakers</text>
+    <line x1="10" y1="60" x2="170" y2="60" stroke="#e5e7eb"/>
+    <text x="10" y="75" font-size="8" fill="#374151">SC6: Requests must be</text>
+    <text x="10" y="87" font-size="8" fill="#374151">rate limited</text>
+  </g>
+  
+  <!-- Footer -->
+  <text x="450" y="680" text-anchor="middle" font-size="10" fill="#9ca3af">
+    STPA Control Structure Diagram - AI System with RAG + MCP + ChromaDB
+  </text>
+</svg>

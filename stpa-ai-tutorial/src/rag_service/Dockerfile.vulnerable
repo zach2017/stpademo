@@ -1,0 +1,29 @@
+# RAG Service Dockerfile - VULNERABLE Version
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    chromadb \
+    sentence-transformers \
+    redis \
+    pydantic \
+    prometheus-client \
+    numpy
+
+COPY main.py .
+
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+# NOTE: No health check in vulnerable version
+
+EXPOSE 8001
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
